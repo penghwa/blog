@@ -1,0 +1,47 @@
+应用容器root 里 ，uninstall 应用过程中的问题：
+	1. 
+ 登录到ac'root 开始begin uninstall后，可能退出了之前的命令窗口。再次登录进入后打算end uninstall,出现问题
+
+
+SQL> alter pluggable database application hxapp end uninstall;
+alter pluggable database application hxapp end uninstall
+*
+第 1 行出现错误:
+ORA-65295: 服务名称或模块名称不匹配
+
+查询当前登录会话的信息：
+SQL> select service_name,module from v$session where sid=userenv('sid');
+
+SERVICE_NAME
+--------------------------------------------------------------------------------
+MODULE
+--------------------------------------------------------------------------------
+gtapp
+sqlplus.exe
+
+查询系统视图中application的信息：
+SQL> select app_name, app_status, app_capture_service, app_capture_module from dba_applications where app_name='HXAPP'；
+
+HXAPP    UNINSTALLING  gtapp SQL*Plus
+
+发现和当前登录的module信息不对 SQL*Plus <=>  sqlplus.exe
+
+可以使用exec dbms_application_info.set_module('SQL*Plus', '');设置module
+
+SQL> select service_name,module from v$session where sid=userenv('sid');
+
+SERVICE_NAME
+--------------------------------------------------------------------------------
+MODULE
+--------------------------------------------------------------------------------
+gtapp
+SQL*Plus
+
+再次执行end uninstall成功.
+
+	1. 
+ORA-65344: 无法卸载或清除具有对象, 用户, 角色和概要文件的应用程序 处理
+
+
+之前application install的语句里包含create user等类型的语句。可以查询select *   from pdb_sync$ ;
+使用drop user , drop table等语句清除这些对象，再次执行end uninstall
